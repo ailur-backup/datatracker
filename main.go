@@ -491,7 +491,7 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 
 	router.Get("/api/rfc/list", func(w http.ResponseWriter, r *http.Request) {
 		// Get the list of RFCs
-		rows, err := conn.DB.Query("SELECT name, id, year, version FROM rfc")
+		rows, err := conn.DB.Query("SELECT name, id, year, version FROM rfc ORDER BY year DESC, id DESC")
 		if err != nil {
 			renderJSON(500, w, map[string]interface{}{"error": "Internal server error", "code": "01"}, information)
 			return
