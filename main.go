@@ -162,7 +162,7 @@ func verifyJwt(token string, publicKey ed25519.PublicKey, conn library.Database)
 	return claims, true
 }
 
-func Main(information library.ServiceInitializationInformation) {
+func Main(information library.ServiceInitializationInformation) *chi.Mux {
 	var conn library.Database
 	hostName := information.Configuration["hostName"].(string)
 
@@ -616,12 +616,5 @@ func Main(information library.ServiceInitializationInformation) {
 		}, "oauth.html", information)
 	})
 
-	// Report a successful activation
-	information.Outbox <- library.InterServiceMessage{
-		ServiceID:    ServiceInformation.ServiceID,
-		ForServiceID: uuid.MustParse("00000000-0000-0000-0000-000000000001"), // Activation service
-		MessageType:  0,
-		SentAt:       time.Now(),
-		Message:      router,
-	}
+	return router
 }
