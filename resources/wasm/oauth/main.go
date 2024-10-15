@@ -72,7 +72,7 @@ func main() {
 			formData.Set("code_verifier", localStorage.Call("getItem", "OAUTH-verifier").String())
 
 			// Create the request
-			requestUri, err := url.JoinPath(js.Global().Get("window").Get("location").Get("origin").String(), "/api/oauth/token")
+			requestUri, err := url.JoinPath(js.Global().Get("window").Get("location").Get("origin").String(), js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String()+"/token")
 			if err != nil {
 				statusBox.Set("innerText", "Error joining URL: "+err.Error())
 				tryAgain.Set("style", "")
@@ -104,7 +104,7 @@ func main() {
 
 			if response.StatusCode == 200 {
 				// Fetch userinfo
-				requestUri, err := url.JoinPath(js.Global().Get("window").Get("location").Get("origin").String(), "/api/oauth/userinfo")
+				requestUri, err := url.JoinPath(js.Global().Get("window").Get("location").Get("origin").String(), js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String()+"/userinfo")
 				if err != nil {
 					statusBox.Set("innerText", "Error joining URL: "+err.Error())
 					tryAgain.Set("style", "")
