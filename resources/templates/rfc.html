@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>RFC Viewer</title>
+    <script src="/dt-static/js/marked.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        #rfcView {
+            position: fixed;
+            top: 0;
+            bottom: 0;
+            right: 0;
+            left: 0;
+            padding: 20px;
+            background-color: white;
+            overflow-y: scroll;
+        }
+
+        #rfcList button {
+            width: 100%;
+            height: 50px;
+            border: 1px solid black;
+            background-color: white;
+        }
+
+        #rfcList button:hover {
+            background-color: lightgray;
+        }
+
+        #rfcTitle {
+            margin-top: 0;
+        }
+
+        #loggedInOnly {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            padding: 10px;
+            border-top: 1px solid black;
+            height: 40px;
+            background-color: white;
+        }
+
+        #loggedInOnly button {
+            border: 1px solid black;
+            background-color: white;
+            font-size: 16px;
+        }
+
+        #loggedInOnly button:hover {
+            background-color: lightgray;
+        }
+
+        #loggedInOnly div {
+            width: 170px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        #commentText {
+            width: 100%;
+            resize: none;
+            border: 1px solid black;
+            border-right: none;
+            height: 34px;
+            transform: translate(1px, -1px);
+        }
+
+        #commentList {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        #commentList li {
+            text-decoration: none;
+        }
+
+        #commentList li div {
+            border: 1px solid black;
+            width: fit-content;
+            margin-top: 5px;
+        }
+
+        #commentList li div button {
+            border: none;
+            border-left: 1px solid black;
+            height: 100%;
+            padding: 10px;
+            font-size: 16px;
+            background-color: white;
+        }
+
+        #commentList li div button:hover {
+            background-color: lightgray;
+        }
+
+        #closeRfc {
+            position: fixed;
+            top: 10px;
+            right: 10px;
+            background-color: white;
+            border: 1px solid black;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+        }
+
+        #closeRfc:hover {
+            background-color: lightgray;
+        }
+    </style>
+</head>
+<body>
+    <div id="rfcList"><p>Loading...</p></div>
+    <div style="display: none" id="rfcView">
+        <button id="closeRfc">X</button>
+        <h2 id="rfcTitle"></h2>
+        <p id="rfcIdentifier"></p>
+        <p id="rfcVersion"></p>
+        <div id="markdown"></div>
+        <div id="comments">
+        <h3>Comments</h3>
+        <ul id="commentList"></ul>
+            <div id="loggedInOnly" style="display: none">
+                <div><label for="commentText">Leave a comment:</label></div>
+                <textarea id="commentText"></textarea>
+                <button id="commentButton">Comment</button>
+            </div>
+        </div>
+    </div>
+    <script>
+        async function showRFC(id, year) {
+            let response = await fetch("/api/rfc/get", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    "id": id,
+                    "year": year
+                })
+            })
+
+            if (response.status !== 200) {
+                document.getElementById("rfcView").innerHTML = "<p>Error loading RFC</p>"
+                return
+            }
+
+            let responseJson = await response.json()
+            document.getElementById("rfcTitle").innerText = responseJson["name"]
+            document.getElementById("rfcIdentifier").innerText = "RFC-"+year+"-"+id.toString().padStart(4, "0")
+            document.getElementById("rfcVersion").innerText = "Version "+responseJson["version"]
+            document.getElementById("markdown").innerHTML = marked.parse("---\n"+responseJson["content"]+"\n---")
+            document.getElementById("rfcView").style.display = "initial"
+
+            if (localStorage.getItem("SECRET-token") !== null) {
+                document.getElementById("loggedInOnly").style.display = "flex"
+                document.getElementById("comments").style.marginBottom = "50px"
+            }
+
+            let commentResponse = await fetch("/api/comment/list", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    "rfcId": parseInt(id),
+                    "rfcYear": parseInt(year)
+                })
+            })
+
+            let commentResponseJson = await commentResponse.json()
+            for (let i = 0; i < commentResponseJson["comments"].length; i++) {
+                let comment = commentResponseJson["comments"][i]
+                let commentLi = document.createElement("li")
+                if (comment["author"] !== localStorage.getItem("CONFIG-username")) {
+                    commentLi.innerHTML = "<div style='padding: 10px' commentId='" + comment["id"] + "'><span>" + comment["author"] + ": " + comment["content"] + "</span></div>"
+                } else {
+                    commentLi.innerHTML = "<div commentId='" + comment["id"] + "'><span style='padding: 10px'>" + comment["author"] + ": " + comment["content"] + "</span><button onclick=\"deleteComment('" + comment["id"] + "')\">Delete</button></div>"
+                }
+                document.getElementById("commentList").appendChild(commentLi)
+            }
+        }
+
+        async function deleteComment(commentId) {
+            let response = await fetch("/api/comment/remove", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    "id": commentId,
+                    "token": localStorage.getItem("SECRET-token")
+                })
+            })
+
+            let responseJson = await response.json()
+            if (response.status !== 200 && response.status !== 500) {
+                alert("Error deleting comment: "+responseJson["error"])
+                return
+            } else if (response.status === 500) {
+                alert("Internal server error, your error code is: "+responseJson["code"])
+                return
+            }
+
+            document.querySelector("div[commentId='"+commentId+"']").remove()
+        }
+
+        document.getElementById("commentButton").addEventListener("click", async function() {
+            let commentText = document.getElementById("commentText").value
+            let rfcId = document.getElementById("rfcIdentifier").innerText.split("-")[2]
+            let rfcYear = document.getElementById("rfcIdentifier").innerText.split("-")[1]
+            let response = await fetch("/api/comment/add", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                    "rfcId": parseInt(rfcId),
+                    "rfcYear": parseInt(rfcYear),
+                    "content": commentText,
+                    "token": localStorage.getItem("SECRET-token")
+                })
+            })
+
+            let responseJson = await response.json()
+            if (response.status !== 200 && response.status !== 500) {
+                alert("Error adding comment: "+responseJson["error"])
+                return
+            } else if (response.status === 500) {
+                alert("Internal server error, your error code is: "+responseJson["code"])
+                return
+            }
+
+            let commentLi = document.createElement("li")
+            commentLi.innerHTML = "<div commentId='"+responseJson["id"]+"'><span style='padding: 10px'>"+responseJson["author"]+": "+commentText+"</span><button onclick=\"deleteComment('"+responseJson["id"]+"')\">Delete</button></div>"
+            document.getElementById("commentList").appendChild(commentLi)
+        })
+
+        document.getElementById("closeRfc").addEventListener("click", function() {
+            document.getElementById("rfcView").style.display = "none"
+            document.getElementById("commentList").innerHTML = ""
+            document.getElementById("commentText").value = ""
+        })
+
+        document.addEventListener("DOMContentLoaded", async function() {
+            let response = await fetch("/api/rfc/list")
+            let responseJson = await response.json()
+            if (response.status !== 200) {
+                document.getElementById("rfcList").innerHTML = "<p>Error loading RFCs</p>"
+                return
+            }
+
+            document.getElementById("rfcList").innerHTML = ""
+
+            let rfcList = responseJson["rfcs"]
+            for (let i = 0; i < rfcList.length; i++) {
+                let rfc = rfcList[i]
+                let rfcDiv = document.createElement("div")
+                rfcDiv.innerHTML = "<button onclick=\"showRFC("+rfc["id"]+","+rfc["year"]+")\">RFC-"+rfc["year"]+"-"+rfc["id"].toString().padStart(4, "0")+" "+rfc["name"]+" "+rfc["version"]+"</button>"
+                document.getElementById("rfcList").appendChild(rfcDiv)
+            }
+        })
+    </script>
+</body>
+</html>

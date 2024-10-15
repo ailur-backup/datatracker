@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Admin</title>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+    </style>
+</head>
+<body>
+    <h2>Submit a new RFC</h2>
+    <input type="text" id="rfcTitle" placeholder="Title">
+    <input type="text" id="rfcYear" placeholder="Year">
+    <input type="text" id="rfcId" placeholder="ID">
+    <textarea id="rfcText"></textarea>
+    <button id="submitRfc">Submit</button>
+    <h2>Remove an RFC</h2>
+    <input type="text" id="rfcYearRem" placeholder="Year">
+    <input type="text" id="rfcIdRem" placeholder="ID">
+    <button id="removeRfc">Remove</button>
+    <script>
+        document.getElementById("submitRfc").addEventListener("click", function() {
+            const title = document.getElementById("rfcTitle").value;
+            const year = document.getElementById("rfcYear").value;
+            const id = document.getElementById("rfcId").value;
+            const text = document.getElementById("rfcText").value;
+            fetch("/api/rfc/add", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    name: title,
+                    year: parseInt(year),
+                    id: parseInt(id),
+                    version: "1.0.0",
+                    content: text,
+                    token: localStorage.getItem("SECRET-token")
+                })
+            }).then(function(response) {
+                if (response.status === 200) {
+                    alert("RFC submitted successfully");
+                } else {
+                    alert("Failed to submit RFC");
+                }
+            });
+        });
+
+        document.getElementById("removeRfc").addEventListener("click", function() {
+            const year = document.getElementById("rfcYearRem").value;
+            const id = document.getElementById("rfcIdRem").value;
+            fetch("/api/rfc/remove", {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    year: year,
+                    id: id,
+                    token: localStorage.getItem("SECRET-token")
+                })
+            }).then(function(response) {
+                if (response.status === 200) {
+                    alert("RFC removed successfully");
+                } else {
+                    alert("Failed to remove RFC");
+                }
+            });
+        });
+    </script>
+</body>
+</html>

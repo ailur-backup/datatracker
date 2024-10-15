@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Logging in...</title>
+    <meta charset="UTF-8"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+    <script src="/dt-static/js/wasm_exec.js"></script>
+    <style>
+        body {
+            font-family: sans-serif;
+        }
+
+        button {
+            border: 1px solid black;
+            background-color: white;
+            padding: 10px;
+        }
+
+        button:hover {
+            background-color: lightgray;
+        }
+    </style>
+</head>
+<body>
+    <text id="clientId" style="display: none">{{ .ClientId }}</text>
+    <h2>Logging in...</h2>
+    <p id="statusBox"></p>
+    <button id="tryAgain" style="display: none">Try again</button>
+    <script>
+        loadWasm("/dt-static/wasm/oauth.wasm")
+    </script>
+</body>
+</html>
