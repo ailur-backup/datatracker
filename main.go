@@ -208,7 +208,7 @@ func Main(information library.ServiceInitializationInformation) {
 				logFunc(err.Error(), 3, information)
 			}
 			// Create the comments table
-			_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS comments (id BLOB NOT NULL, rfcId INTEGER NOT NULL, rfcYear INTEGER NOT NULL, content TEXT NOT NULL, creator BYTEA NOT NULL, creatorName TEXT NOT NULL, created INTEGER NOT NULL)")
+			_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS comments (id BYTEA NOT NULL, rfcId INTEGER NOT NULL, rfcYear INTEGER NOT NULL, content TEXT NOT NULL, creator BYTEA NOT NULL, creatorName TEXT NOT NULL, created INTEGER NOT NULL)")
 			if err != nil {
 				logFunc(err.Error(), 3, information)
 			}
