@@ -251,6 +251,36 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 		logFunc(response.Message.(error).Error(), 3, information)
 	}
 
+	// Ask the authentication service for the OAuth host name
+	information.Outbox <- library.InterServiceMessage{
+		ServiceID:    ServiceInformation.ServiceID,
+		ForServiceID: uuid.MustParse("00000000-0000-0000-0000-000000000004"), // Authentication service
+		MessageType:  0,                                                      // Request OAuth host name
+		SentAt:       time.Now(),
+		Message:      nil,
+	}
+
+	var oauthHostName string
+
+	// 3 second timeout
+	go func() {
+		time.Sleep(3 * time.Second)
+		if oauthHostName == "" {
+			logFunc("Timeout while waiting for the OAuth host name from the authentication service", 3, information)
+		}
+	}()
+
+	// Wait for the response
+	response = <-information.Inbox
+	if response.MessageType == 0 {
+		// This is the OAuth host name
+		oauthHostName = response.Message.(string)
+	} else {
+		// This is an error message
+		// Log the error message to the logger service
+		logFunc(response.Message.(error).Error(), 3, information)
+	}
+
 	// Ask the authentication service to create a new OAuth2 client
 	urlPath, err := url.JoinPath(hostName, "/oauth")
 	if err != nil {
@@ -324,7 +354,7 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 		}
 
 		// Get the username
-		sub, username, err := getUsername(commentData.JwtToken, information.Configuration["hostName"].(string), publicKey)
+		sub, username, err := getUsername(commentData.JwtToken, oauthHostName, publicKey)
 		if err != nil {
 			renderJSON(400, w, map[string]interface{}{"error": "Invalid JWT token"}, information)
 			fmt.Println(err)
@@ -414,7 +444,7 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 		}
 
 		// Get the username
-		_, username, err := getUsername(commentData.JwtToken, information.Configuration["hostName"].(string), publicKey)
+		_, username, err := getUsername(commentData.JwtToken, oauthHostName, publicKey)
 		if err != nil {
 			renderJSON(400, w, map[string]interface{}{"error": "Invalid JWT token"}, information)
 			return
@@ -612,7 +642,8 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 
 	router.Get("/oauth", func(w http.ResponseWriter, r *http.Request) {
 		renderTemplate(200, w, map[string]interface{}{
-			"ClientId": oauthResponse.AppID,
+			"ClientId":         oauthResponse.AppID,
+			"AuthorizationUri": oauthHostName,
 		}, "oauth.html", information)
 	})
 

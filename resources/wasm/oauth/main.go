@@ -192,7 +192,7 @@ func main() {
 			localStorage.Call("setItem", "OAUTH-verifier", verifier)
 
 			// Redirect to the authorization page
-			js.Global().Get("window").Get("location").Call("replace", "/authorize?response_type=code&client_id="+js.Global().Get("document").Call("getElementById", "clientId").Get("innerText").String()+"&redirect_uri="+url.QueryEscape(js.Global().Get("window").Get("location").Get("origin").String()+"/oauth")+"&code_challenge="+verifierChallenge+"&code_challenge_method=S256")
+			js.Global().Get("window").Get("location").Call("replace", js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String()+"/authorize?response_type=code&client_id="+js.Global().Get("document").Call("getElementById", "clientId").Get("innerText").String()+"&redirect_uri="+url.QueryEscape(js.Global().Get("window").Get("location").Get("origin").String()+"/oauth")+"&code_challenge="+verifierChallenge+"&code_challenge_method=S256")
 		}
 	}()
 

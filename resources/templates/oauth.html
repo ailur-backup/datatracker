@@ -23,7 +23,8 @@
     </style>
 </head>
 <body>
-    <text id="clientId" style="display: none">{{ .ClientId }}</text>
+    <span id="clientId" style="display: none">{{ .ClientId }}</span>
+    <span id="authorizationUri" style="display: none">{{ .AuthorizationUri }}</span>
     <h2>Logging in...</h2>
     <p id="statusBox"></p>
     <button id="tryAgain" style="display: none">Try again</button>
