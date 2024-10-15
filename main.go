@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"net/url"
 	"time"
 
@@ -357,14 +356,12 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 		sub, username, err := getUsername(commentData.JwtToken, oauthHostName, publicKey)
 		if err != nil {
 			renderJSON(400, w, map[string]interface{}{"error": "Invalid JWT token"}, information)
-			fmt.Println(err)
 			return
 		}
 
 		subBytes, err := uuid.MustParse(sub).MarshalBinary()
 		if err != nil {
 			renderJSON(500, w, map[string]interface{}{"error": "Internal server error", "code": "10"}, information)
-			fmt.Println(err)
 			return
 		}
 
@@ -385,7 +382,6 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 		_, err = conn.DB.Exec("INSERT INTO comments (id, rfcId, rfcYear, content, creator, creatorName, created) VALUES ($1, $2, $3, $4, $5, $6, $7)", commentIdBytes, commentData.RfcId, commentData.RfcYear, commentData.Content, subBytes, username, time.Now().Unix())
 		if err != nil {
 			renderJSON(500, w, map[string]interface{}{"error": "Internal server error", "code": "13"}, information)
-			fmt.Println(err)
 			return
 		}
 

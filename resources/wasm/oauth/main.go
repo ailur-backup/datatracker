@@ -41,11 +41,9 @@ func randomChars(length int) (string, error) {
 }
 
 func main() {
-	// Redirect to rfc if already logged in
+	// Clear local storage
 	localStorage := js.Global().Get("localStorage")
-	if !localStorage.Call("getItem", "SECRET-token").IsNull() {
-		js.Global().Get("window").Get("location").Call("replace", "/rfc")
-	}
+	localStorage.Call("clear")
 
 	statusBox := js.Global().Get("document").Call("getElementById", "statusBox")
 	tryAgain := js.Global().Get("document").Call("getElementById", "tryAgain")
