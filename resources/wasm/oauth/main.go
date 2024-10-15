@@ -72,7 +72,7 @@ func main() {
 			formData.Set("code_verifier", localStorage.Call("getItem", "OAUTH-verifier").String())
 
 			// Create the request
-			requestUri, err := url.JoinPath(js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String(), "/oauth/token")
+			requestUri, err := url.JoinPath(js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String(), "/api/oauth/token")
 			if err != nil {
 				statusBox.Set("innerText", "Error joining URL: "+err.Error())
 				tryAgain.Set("style", "")
@@ -104,7 +104,7 @@ func main() {
 
 			if response.StatusCode == 200 {
 				// Fetch userinfo
-				requestUri, err := url.JoinPath(js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String(), "/oauth/userinfo")
+				requestUri, err := url.JoinPath(js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String(), "/api/oauth/userinfo")
 				if err != nil {
 					statusBox.Set("innerText", "Error joining URL: "+err.Error())
 					tryAgain.Set("style", "")
@@ -192,14 +192,7 @@ func main() {
 			localStorage.Call("setItem", "OAUTH-verifier", verifier)
 
 			// Redirect to the authorization page
-			authorizeUri, err := url.JoinPath(js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String(), "/authorize?response_type=code&client_id="+js.Global().Get("document").Call("getElementById", "clientId").Get("innerText").String()+"&redirect_uri="+url.QueryEscape(js.Global().Get("window").Get("location").Get("origin").String()+"/oauth")+"&code_challenge="+verifierChallenge+"&code_challenge_method=S256")
-			if err != nil {
-				statusBox.Set("innerText", "Error joining URL: "+err.Error())
-				tryAgain.Set("style", "")
-				return
-			}
-
-			js.Global().Get("window").Get("location").Call("replace", authorizeUri)
+			js.Global().Get("window").Get("location").Call("replace", js.Global().Get("document").Call("getElementById", "authorizationUri").Get("innerText").String()+"/authorize?response_type=code&client_id="+js.Global().Get("document").Call("getElementById", "clientId").Get("innerText").String()+"&redirect_uri="+url.QueryEscape(js.Global().Get("window").Get("location").Get("origin").String()+"/oauth")+"&code_challenge="+verifierChallenge+"&code_challenge_method=S256")
 		}
 	}()
 
