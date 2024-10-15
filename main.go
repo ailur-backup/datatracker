@@ -9,8 +9,10 @@ import (
 	"crypto/ed25519"
 	"database/sql"
 	"encoding/json"
-	library "git.ailur.dev/ailur/fg-library"
+
+	library "git.ailur.dev/ailur/fg-library/v2"
 	authLibrary "git.ailur.dev/ailur/fg-nucleus-library"
+	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"html/template"
@@ -297,7 +299,7 @@ func Main(information library.ServiceInitializationInformation) {
 	}
 
 	// Set up the router
-	router := information.Router
+	router := chi.NewRouter()
 
 	// Set up the static routes
 	staticDir, err := fs.Sub(information.ResourceDir, "static")
@@ -620,6 +622,6 @@ func Main(information library.ServiceInitializationInformation) {
 		ForServiceID: uuid.MustParse("00000000-0000-0000-0000-000000000001"), // Activation service
 		MessageType:  0,
 		SentAt:       time.Now(),
-		Message:      true,
+		Message:      router,
 	}
 }
