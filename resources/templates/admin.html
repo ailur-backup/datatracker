@@ -59,8 +59,8 @@
                     "Content-Type": "application/json"
                 },
                 body: JSON.stringify({
-                    year: year,
-                    id: id,
+                    year: parseInt(year),
+                    id: parseInt(id),
                     token: localStorage.getItem("SECRET-token")
                 })
             }).then(function(response) {
