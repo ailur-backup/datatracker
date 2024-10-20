@@ -11,7 +11,6 @@ import (
 
 	library "git.ailur.dev/ailur/fg-library/v2"
 	authLibrary "git.ailur.dev/ailur/fg-nucleus-library"
-	"github.com/go-chi/chi/v5"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
 	"html/template"
@@ -161,7 +160,7 @@ func verifyJwt(token string, publicKey ed25519.PublicKey, conn library.Database)
 	return claims, true
 }
 
-func Main(information library.ServiceInitializationInformation) *chi.Mux {
+func Main(information library.ServiceInitializationInformation) {
 	var conn library.Database
 	hostName := information.Configuration["hostName"].(string)
 
@@ -328,7 +327,7 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 	}
 
 	// Set up the router
-	router := chi.NewRouter()
+	router := information.Router
 
 	// Set up the static routes
 	staticDir, err := fs.Sub(information.ResourceDir, "static")
@@ -642,6 +641,4 @@ func Main(information library.ServiceInitializationInformation) *chi.Mux {
 			"AuthorizationUri": oauthHostName,
 		}, "oauth.html", information)
 	})
-
-	return router
 }
