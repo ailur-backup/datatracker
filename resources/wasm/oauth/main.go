@@ -41,9 +41,7 @@ func randomChars(length int) (string, error) {
 }
 
 func main() {
-	// Clear local storage
 	localStorage := js.Global().Get("localStorage")
-	localStorage.Call("clear")
 
 	statusBox := js.Global().Get("document").Call("getElementById", "statusBox")
 	tryAgain := js.Global().Get("document").Call("getElementById", "tryAgain")
@@ -175,6 +173,9 @@ func main() {
 				tryAgain.Set("style", "")
 			}
 		} else {
+			// Clear local storage
+			localStorage.Call("clear")
+
 			// Start the authorization process
 			verifier, err := randomChars(128)
 			if err != nil {
