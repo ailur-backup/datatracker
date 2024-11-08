@@ -1,6 +1,6 @@
 module git.ailur.dev/ailur/datatracker
 
-go 1.23.1
+go 1.23.3
 
 require (
 	git.ailur.dev/ailur/fg-library/v2 v2.1.1
