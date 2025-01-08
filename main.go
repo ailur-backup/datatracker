@@ -2,14 +2,13 @@ package main
 
 import (
 	"errors"
-	"net/url"
 	"time"
 
 	"crypto/ed25519"
 	"database/sql"
 	"encoding/json"
 
-	library "git.ailur.dev/ailur/fg-library/v2"
+	library "git.ailur.dev/ailur/fg-library/v3"
 	authLibrary "git.ailur.dev/ailur/fg-nucleus-library"
 	"github.com/golang-jwt/jwt/v5"
 	"github.com/google/uuid"
@@ -23,6 +22,7 @@ var ServiceInformation = library.Service{
 	Permissions: library.Permissions{
 		Authenticate:              true,  // This service does require authentication
 		Database:                  true,  // This service does require database access
+		Router:                    true,  // This service does require a router
 		BlobStorage:               false, // This service does not require blob storage
 		InterServiceCommunication: true,  // This service does require inter-service communication
 		Resources:                 true,  // This service does require its HTTP templates and static files
@@ -30,15 +30,13 @@ var ServiceInformation = library.Service{
 	ServiceID: uuid.MustParse("322dc186-04d2-4f69-89b5-403ab643cc1d"),
 }
 
-func logFunc(message string, messageType uint64, information library.ServiceInitializationInformation) {
+var (
+	loggerService = uuid.MustParse("00000000-0000-0000-0000-000000000002")
+)
+
+func logFunc(message string, messageType library.MessageCode, information library.ServiceInitializationInformation) {
 	// Log the message to the logger service
-	information.Outbox <- library.InterServiceMessage{
-		ServiceID:    ServiceInformation.ServiceID,
-		ForServiceID: uuid.MustParse("00000000-0000-0000-0000-000000000002"), // Logger service
-		MessageType:  messageType,
-		SentAt:       time.Now(),
-		Message:      message,
-	}
+	information.SendISMessage(loggerService, messageType, message)
 }
 
 func renderTemplate(statusCode int, w http.ResponseWriter, data map[string]interface{}, templatePath string, information library.ServiceInitializationInformation) {
@@ -104,6 +102,10 @@ func getUsername(token string, oauthHostName string, publicKey ed25519.PublicKey
 		Sub      string `json:"sub"`
 	}
 	request, err := http.NewRequest("GET", oauthHostName+"/api/oauth/userinfo", nil)
+	if err != nil {
+		return "", "", err
+	}
+
 	request.Header.Set("Authorization", "Bearer "+token)
 	response, err := http.DefaultClient.Do(request)
 	if err != nil {
@@ -165,165 +167,55 @@ func Main(information library.ServiceInitializationInformation) {
 	hostName := information.Configuration["hostName"].(string)
 
 	// Initiate a connection to the database
-	// Call service ID 1 to get the database connection information
-	information.Outbox <- library.InterServiceMessage{
-		ServiceID:    ServiceInformation.ServiceID,
-		ForServiceID: uuid.MustParse("00000000-0000-0000-0000-000000000001"), // Service initialization service
-		MessageType:  1,                                                      // Request connection information
-		SentAt:       time.Now(),
-		Message:      nil,
-	}
-
-	// Wait for the response
-	response := <-information.Inbox
-	if response.MessageType == 2 {
-		// This is the connection information
-		// Set up the database connection
-		conn = response.Message.(library.Database)
-		if conn.DBType == library.Sqlite {
-			// Create the RFCs table
-			_, err := conn.DB.Exec("CREATE TABLE IF NOT EXISTS rfc (id INTEGER NOT NULL, year INTEGER NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL, version TEXT NOT NULL, creator BLOB NOT NULL, UNIQUE(id, year))")
-			if err != nil {
-				logFunc(err.Error(), 3, information)
-			}
-			// Create the users table
-			_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS users (id BLOB NOT NULL)")
-			if err != nil {
-				logFunc(err.Error(), 3, information)
-			}
-			// Create the comments table
-			_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS comments (id BLOB NOT NULL, rfcId INTEGER NOT NULL, rfcYear INTEGER NOT NULL, content TEXT NOT NULL, creator BLOB NOT NULL, creatorName TEXT NOT NULL, created INTEGER NOT NULL)")
-			if err != nil {
-				logFunc(err.Error(), 3, information)
-			}
-		} else {
-			// Create the RFCs table
-			_, err := conn.DB.Exec("CREATE TABLE IF NOT EXISTS rfc (id SERIAL PRIMARY KEY, year INTEGER NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL, version TEXT NOT NULL, creator BYTEA NOT NULL, UNIQUE(id, year))")
-			if err != nil {
-				logFunc(err.Error(), 3, information)
-			}
-			// Create the users table
-			_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS users (id BYTEA NOT NULL)")
-			if err != nil {
-				logFunc(err.Error(), 3, information)
-			}
-			// Create the comments table
-			_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS comments (id BYTEA NOT NULL, rfcId INTEGER NOT NULL, rfcYear INTEGER NOT NULL, content TEXT NOT NULL, creator BYTEA NOT NULL, creatorName TEXT NOT NULL, created INTEGER NOT NULL)")
-			if err != nil {
-				logFunc(err.Error(), 3, information)
-			}
-		}
-	} else {
-		// This is an error message
-		// Log the error message to the logger service
-		logFunc(response.Message.(error).Error(), 3, information)
-	}
-
-	// Ask the authentication service for the public key
-	information.Outbox <- library.InterServiceMessage{
-		ServiceID:    ServiceInformation.ServiceID,
-		ForServiceID: uuid.MustParse("00000000-0000-0000-0000-000000000004"), // Authentication service
-		MessageType:  2,                                                      // Request public key
-		SentAt:       time.Now(),
-		Message:      nil,
-	}
-
-	var publicKey ed25519.PublicKey = nil
-
-	// 3 second timeout
-	go func() {
-		time.Sleep(3 * time.Second)
-		if publicKey == nil {
-			logFunc("Timeout while waiting for the public key from the authentication service", 3, information)
-		}
-	}()
-
-	// Wait for the response
-	response = <-information.Inbox
-	if response.MessageType == 2 {
-		// This is the public key
-		publicKey = response.Message.(ed25519.PublicKey)
-	} else {
-		// This is an error message
-		// Log the error message to the logger service
-		logFunc(response.Message.(error).Error(), 3, information)
-	}
-
-	// Ask the authentication service for the OAuth host name
-	information.Outbox <- library.InterServiceMessage{
-		ServiceID:    ServiceInformation.ServiceID,
-		ForServiceID: uuid.MustParse("00000000-0000-0000-0000-000000000004"), // Authentication service
-		MessageType:  0,                                                      // Request OAuth host name
-		SentAt:       time.Now(),
-		Message:      nil,
-	}
-
-	var oauthHostName string
-
-	// 3 second timeout
-	go func() {
-		time.Sleep(3 * time.Second)
-		if oauthHostName == "" {
-			logFunc("Timeout while waiting for the OAuth host name from the authentication service", 3, information)
-		}
-	}()
-
-	// Wait for the response
-	response = <-information.Inbox
-	if response.MessageType == 0 {
-		// This is the OAuth host name
-		oauthHostName = response.Message.(string)
-	} else {
-		// This is an error message
-		// Log the error message to the logger service
-		logFunc(response.Message.(error).Error(), 3, information)
-	}
-
-	// Ask the authentication service to create a new OAuth2 client
-	urlPath, err := url.JoinPath(hostName, "/oauth")
+	conn, err := information.GetDatabase()
 	if err != nil {
 		logFunc(err.Error(), 3, information)
+		return
 	}
 
-	information.Outbox <- library.InterServiceMessage{
-		ServiceID:    ServiceInformation.ServiceID,
-		ForServiceID: uuid.MustParse("00000000-0000-0000-0000-000000000004"), // Authentication service
-		MessageType:  1,                                                      // Create OAuth2 client
-		SentAt:       time.Now(),
-		Message: authLibrary.OAuthInformation{
-			Name:        "Data Tracker",
-			RedirectUri: urlPath,
-			KeyShareUri: "",
-			Scopes:      []string{"openid"},
-		},
-	}
-
-	oauthResponse := authLibrary.OAuthResponse{}
-
-	// 3 second timeout
-	go func() {
-		time.Sleep(3 * time.Second)
-		if oauthResponse == (authLibrary.OAuthResponse{}) {
-			logFunc("Timeout while waiting for the OAuth response from the authentication service", 3, information)
+	if conn.DBType == library.Sqlite {
+		// Create the RFCs table
+		_, err := conn.DB.Exec("CREATE TABLE IF NOT EXISTS rfc (id INTEGER NOT NULL, year INTEGER NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL, version TEXT NOT NULL, creator BLOB NOT NULL, UNIQUE(id, year))")
+		if err != nil {
+			logFunc(err.Error(), 3, information)
 		}
-	}()
+		// Create the users table
+		_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS users (id BLOB NOT NULL)")
+		if err != nil {
+			logFunc(err.Error(), 3, information)
+		}
+		// Create the comments table
+		_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS comments (id BLOB NOT NULL, rfcId INTEGER NOT NULL, rfcYear INTEGER NOT NULL, content TEXT NOT NULL, creator BLOB NOT NULL, creatorName TEXT NOT NULL, created INTEGER NOT NULL)")
+		if err != nil {
+			logFunc(err.Error(), 3, information)
+		}
+	} else {
+		// Create the RFCs table
+		_, err := conn.DB.Exec("CREATE TABLE IF NOT EXISTS rfc (id SERIAL PRIMARY KEY, year INTEGER NOT NULL, name TEXT NOT NULL, content TEXT NOT NULL, version TEXT NOT NULL, creator BYTEA NOT NULL, UNIQUE(id, year))")
+		if err != nil {
+			logFunc(err.Error(), 3, information)
+		}
+		// Create the users table
+		_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS users (id BYTEA NOT NULL)")
+		if err != nil {
+			logFunc(err.Error(), 3, information)
+		}
+		// Create the comments table
+		_, err = conn.DB.Exec("CREATE TABLE IF NOT EXISTS comments (id BYTEA NOT NULL, rfcId INTEGER NOT NULL, rfcYear INTEGER NOT NULL, content TEXT NOT NULL, creator BYTEA NOT NULL, creatorName TEXT NOT NULL, created INTEGER NOT NULL)")
+		if err != nil {
+			logFunc(err.Error(), 3, information)
+		}
+	}
 
-	// Wait for the response
-	response = <-information.Inbox
-	switch response.MessageType {
-	case 0:
-		// Success, set the OAuth response
-		oauthResponse = response.Message.(authLibrary.OAuthResponse)
-		logFunc("Initialized with App ID: "+oauthResponse.AppID, 0, information)
-	case 1:
-		// An error which is their fault
-		logFunc(response.Message.(error).Error(), 3, information)
-	case 2:
-		// An error which is our fault
-		logFunc(response.Message.(error).Error(), 3, information)
-	default:
-		// An unknown error
-		logFunc("Unknown error", 3, information)
+	// Initialize the OAuth
+	oauthResponse, publicKey, oauthHostName, err := authLibrary.InitializeOAuth(authLibrary.OAuthInformation{
+		Name:        "datatracker",
+		RedirectUri: hostName + "/oauth",
+		Scopes:      []string{"openid"},
+	}, information)
+	if err != nil {
+		logFunc(err.Error(), 3, information)
+		return
 	}
 
 	// Set up the router
