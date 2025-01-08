@@ -2,7 +2,6 @@ package main
 
 import (
 	"errors"
-	"fmt"
 	"time"
 
 	"crypto/ed25519"
@@ -37,7 +36,6 @@ var (
 
 func logFunc(message string, messageType library.MessageCode, information *library.ServiceInitializationInformation) {
 	// Log the message to the logger service
-	fmt.Println("here i am, sending a message to the logger service")
 	information.SendISMessage(loggerService, messageType, message)
 }
 
@@ -171,7 +169,6 @@ func Main(information *library.ServiceInitializationInformation) {
 	go information.StartISProcessor()
 
 	// Initiate a connection to the database
-	fmt.Println("Connecting to the database")
 	conn, err := information.GetDatabase()
 	if err != nil {
 		logFunc(err.Error(), 3, information)
