@@ -2,6 +2,7 @@ package main
 
 import (
 	"errors"
+	"fmt"
 	"time"
 
 	"crypto/ed25519"
@@ -34,12 +35,13 @@ var (
 	loggerService = uuid.MustParse("00000000-0000-0000-0000-000000000002")
 )
 
-func logFunc(message string, messageType library.MessageCode, information library.ServiceInitializationInformation) {
+func logFunc(message string, messageType library.MessageCode, information *library.ServiceInitializationInformation) {
 	// Log the message to the logger service
+	fmt.Println("here i am, sending a message to the logger service")
 	information.SendISMessage(loggerService, messageType, message)
 }
 
-func renderTemplate(statusCode int, w http.ResponseWriter, data map[string]interface{}, templatePath string, information library.ServiceInitializationInformation) {
+func renderTemplate(statusCode int, w http.ResponseWriter, data map[string]interface{}, templatePath string, information *library.ServiceInitializationInformation) {
 	var err error
 	var requestedTemplate *template.Template
 	// Output ls of the resource directory
@@ -57,7 +59,7 @@ func renderTemplate(statusCode int, w http.ResponseWriter, data map[string]inter
 	}
 }
 
-func renderString(statusCode int, w http.ResponseWriter, data string, information library.ServiceInitializationInformation) {
+func renderString(statusCode int, w http.ResponseWriter, data string, information *library.ServiceInitializationInformation) {
 	w.WriteHeader(statusCode)
 	_, err := w.Write([]byte(data))
 	if err != nil {
@@ -65,7 +67,7 @@ func renderString(statusCode int, w http.ResponseWriter, data string, informatio
 	}
 }
 
-func renderJSON(statusCode int, w http.ResponseWriter, data map[string]interface{}, information library.ServiceInitializationInformation) {
+func renderJSON(statusCode int, w http.ResponseWriter, data map[string]interface{}, information *library.ServiceInitializationInformation) {
 	w.WriteHeader(statusCode)
 	err := json.NewEncoder(w).Encode(data)
 	if err != nil {
@@ -162,11 +164,14 @@ func verifyJwt(token string, publicKey ed25519.PublicKey, conn library.Database)
 	return claims, true
 }
 
-func Main(information library.ServiceInitializationInformation) {
+func Main(information *library.ServiceInitializationInformation) {
 	var conn library.Database
 	hostName := information.Configuration["hostName"].(string)
 
+	go information.StartISProcessor()
+
 	// Initiate a connection to the database
+	fmt.Println("Connecting to the database")
 	conn, err := information.GetDatabase()
 	if err != nil {
 		logFunc(err.Error(), 3, information)
