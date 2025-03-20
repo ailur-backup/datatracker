@@ -2,8 +2,8 @@ git.ailur.dev/ailur/fg-library/v3 v3.6.2 h1:PNJKxpvbel2iDeB9+/rpYRyMoim6JjRHOXPY
 git.ailur.dev/ailur/fg-library/v3 v3.6.2/go.mod h1:ArNsafpqES2JuxQM5aM+bNe0FwHLIsL6pbjpiWvDwGs=
 git.ailur.dev/ailur/fg-nucleus-library v1.2.2 h1:JbclmxGSoL+ByGZAl0W6PqWRoyBBGTrKrizWDJ7rdI0=
 git.ailur.dev/ailur/fg-nucleus-library v1.2.2/go.mod h1:stxiTyMv3Fa7GzpyLbBUh3ahlb7110p0NnCl8ZTjwBs=
-github.com/go-chi/chi/v5 v5.2.0 h1:Aj1EtB0qR2Rdo2dG4O94RIU35w2lvQSj6BRA4+qwFL0=
-github.com/go-chi/chi/v5 v5.2.0/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
+github.com/go-chi/chi/v5 v5.2.1 h1:KOIHODQj58PmL80G2Eak4WdvUzjSJSm0vG72crDCqb8=
+github.com/go-chi/chi/v5 v5.2.1/go.mod h1:L2yAIGWB3H+phAw1NxKwWM+7eUH/lU8pOMm5hHcoops=
 github.com/golang-jwt/jwt/v5 v5.2.1 h1:OuVbFODueb089Lh128TAcimifWaLhJwVflnrgM17wHk=
 github.com/golang-jwt/jwt/v5 v5.2.1/go.mod h1:pqrtFR0X4osieyHYxtmOUWsAWrfe1Q5UVIyoH402zdk=
 github.com/google/uuid v1.6.0 h1:NIvaJDMOsjHA8n1jAhLSgzrAzy1Hgr+hNrb57e+94F0=
